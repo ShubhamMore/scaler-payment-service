@@ -1,11 +1,9 @@
 package com.woolf.project.payment.services;
 
-import com.razorpay.PaymentLink;
-import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
-import com.razorpay.Utils;
+import com.razorpay.*;
 import com.woolf.project.payment.dtos.PaymentCallbackRequestDTO;
 import com.woolf.project.payment.dtos.PaymentDTO;
+import com.woolf.project.payment.exceptions.RefundInvalidException;
 import com.woolf.project.payment.exceptions.NotFoundException;
 import com.woolf.project.payment.models.PaymentModel;
 import com.woolf.project.payment.repositories.PaymentRepository;
@@ -69,10 +67,10 @@ public class PaymentService {
 
     public PaymentModel getPaymentDetails(String orderId) throws NotFoundException {
         return paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new NotFoundException("Payment not found for orderId: "+orderId));
+                .orElseThrow(() -> new NotFoundException("Payment not found for orderId " + orderId));
     }
 
-    public String fetchPaymentStatus_Razorpay(String paymentId) throws RazorpayException, NotFoundException {
+    public String fetchPaymentStatus_Razorpay(String paymentId) throws RazorpayException {
         return razorpayClient.payments.fetch(paymentId).toString();
     }
 
@@ -90,12 +88,37 @@ public class PaymentService {
 
     public void updatePaymentDetails(PaymentCallbackRequestDTO request) throws NotFoundException {
         PaymentModel payment = paymentRepository.findByOrderId(request.getRazorpay_payment_link_id())
-                .orElseThrow(()-> new NotFoundException("Payment not found for payment link id:"
+                .orElseThrow(()-> new NotFoundException("Payment not found for payment link id "
                         +request.getRazorpay_payment_link_id()));
 
         payment.setPaymentId(request.getRazorpay_payment_id());
         payment.setStatus(request.getRazorpay_payment_link_status());
         paymentRepository.save(payment);
+    }
+
+    public PaymentModel createRefund(String orderId) throws NotFoundException, RazorpayException, RefundInvalidException {
+        PaymentModel payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(()-> new NotFoundException("Payment not found for payment link id " +orderId));
+
+        if(!"paid".equals(payment.getStatus())){
+            throw new RefundInvalidException("payment not completed for the order");
+        }
+        String paymentId = payment.getPaymentId();
+        Double amount = payment.getAmount();
+
+        JSONObject refundRequest = new JSONObject();
+        refundRequest.put("amount", amount * 100); // Amount in paise
+        refundRequest.put("speed","optimum");
+
+        Refund refund = razorpayClient.payments.refund(paymentId,refundRequest);
+
+        payment.setRefundId(refund.get("id"));
+        payment.setStatus("refunded");
+        return paymentRepository.save(payment);
+    }
+
+    public String fetchRefundStatus(String refundId) throws RazorpayException {
+        return razorpayClient.refunds.fetch(refundId).toString();
     }
 
 }

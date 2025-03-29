@@ -3,6 +3,7 @@ package com.woolf.project.payment.controllers;
 import com.razorpay.RazorpayException;
 import com.woolf.project.payment.dtos.PaymentCallbackRequestDTO;
 import com.woolf.project.payment.dtos.PaymentDTO;
+import com.woolf.project.payment.exceptions.RefundInvalidException;
 import com.woolf.project.payment.exceptions.NotFoundException;
 import com.woolf.project.payment.models.PaymentModel;
 import com.woolf.project.payment.services.PaymentService;
@@ -66,5 +67,18 @@ public class PaymentController {
 
         return "paid".equals(status)?"Payment Successful !":"Payment Failed !";
     }
+
+    @PostMapping("/create-refund/{orderId}")
+    public ResponseEntity<PaymentDTO> createRefund(@PathVariable String orderId) throws NotFoundException, RefundInvalidException, RazorpayException {
+        PaymentModel payment = paymentService.createRefund(orderId);
+        return new ResponseEntity<>(PaymentDTO.from(payment), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/status/refund/{refundId}")
+    public ResponseEntity<String> getRefundStatus(@PathVariable String refundId) throws RazorpayException {
+        String response = paymentService.fetchRefundStatus(refundId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 
 }
