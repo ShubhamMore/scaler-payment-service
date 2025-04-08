@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Entity
+@Entity(name = "payment")
 public class PaymentModel extends BaseModel{
     private String orderId;
     private String paymentId;
