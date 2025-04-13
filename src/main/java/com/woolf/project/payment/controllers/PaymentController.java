@@ -21,7 +21,7 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
-    @PostMapping("/create-paymentLink")
+    @PostMapping("/createPaymentLink")
     public ResponseEntity<PaymentDTO> createPaymentLink(@RequestParam Double amount,
                                                         @RequestParam String currency,
                                                         @RequestParam String invoiceNo) throws RazorpayException {
@@ -68,7 +68,7 @@ public class PaymentController {
         return "paid".equals(status)?"Payment Successful !":"Payment Failed !";
     }
 
-    @PostMapping("/create-refund/{orderId}")
+    @PostMapping("/createRefund/{orderId}")
     public ResponseEntity<PaymentDTO> createRefund(@PathVariable String orderId) throws NotFoundException, RefundInvalidException, RazorpayException {
         PaymentModel payment = paymentService.createRefund(orderId);
         return new ResponseEntity<>(PaymentDTO.from(payment), HttpStatus.CREATED);
